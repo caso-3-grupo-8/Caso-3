@@ -22,7 +22,7 @@ public class Cliente {
             System.err.println("Exception: " + e.getMessage());
             System.exit(-1);
         }
-        
+
         BufferedReader stdIn = new BufferedReader(new InputStreamReader(System.in));
         System.out.println("P:");
         ProtocoloCliente.diffieHellmann(stdIn,lector,escritor);

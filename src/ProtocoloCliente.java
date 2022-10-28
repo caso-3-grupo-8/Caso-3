@@ -35,7 +35,14 @@ public class ProtocoloCliente {
         boolean ejecutar = true;
         while (ejecutar)
         {
-            fromUser = stdIn.readLine();
+            fromUser = "SECURE INIT";
+            if (fromUser != null){
+                System.out.println("El usuario escribió: " + fromUser);
+                if (fromUser.equalsIgnoreCase("SECURE INIT")){
+                    ejecutar = false;
+                }
+                pOut.println(fromUser);
+            }
             if ((fromServer = pIn.readLine()) != null){
                 System.out.println("Respuesta del Servidor: " + fromServer);
             }
