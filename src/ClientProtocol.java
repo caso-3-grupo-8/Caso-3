@@ -1,5 +1,6 @@
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
+import javax.crypto.spec.IvParameterSpec;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -62,16 +63,31 @@ public class ClientProtocol {
             /* 6b. We send Gy */
             pOut.println(gy.toString());
 
-            /* 7a. We calculate master key */
+            /* 7a. We calculate master key, generate symmetric key and iv1*/
             BigInteger llave_maestra = calcular_llave_maestra(Gx,x,P);
             String str_llave = llave_maestra.toString();
             System.out.println("Client found llave maestra: " + str_llave);
 
-            /* 5. We generate symmetric key and iv1 */
             SecretKey sk_srv = f.csk1(str_llave);
             SecretKey sk_mac = f.csk2(str_llave);
             byte[] iv1 = generateIvBytes();
-            
+
+            /* 8. We send C(K_AB1, <consulta>)*/
+            String consulta = "heeeyyy";
+            String str_iv1 = byte2str(iv1);
+            IvParameterSpec ivSpec1 = new IvParameterSpec(iv1);
+            byte[] byteC = f.senc(consulta.getBytes(), sk_srv, ivSpec1, "client: ");
+            String c = byte2str(byteC);
+            byte[] byteHMAC = f.hmac(consulta.getBytes(), sk_mac);
+            String hmac = byte2str(byteHMAC);
+
+            pOut.println(c);
+            System.out.println("Client C: " + c);
+            pOut.println(hmac);
+            System.out.println("Client HMAC: " + hmac);
+            pOut.println(str_iv1);
+            System.out.println("Client iv1: " + str_iv1);
+
 
         }
         else{
@@ -90,6 +106,17 @@ public class ClientProtocol {
         byte[] ret = new byte[ss.length()/2];
         for (int i = 0 ; i < ret.length ; i++) {
             ret[i] = (byte) Integer.parseInt(ss.substring(i*2,(i+1)*2), 16);
+        }
+        return ret;
+    }
+
+    public String byte2str( byte[] b )
+    {
+        // Encapsulamiento con hexadecimales
+        String ret = "";
+        for (int i = 0 ; i < b.length ; i++) {
+            String g = Integer.toHexString(((char)b[i])&0x00ff);
+            ret += (g.length()==1?"0":"") + g;
         }
         return ret;
     }
