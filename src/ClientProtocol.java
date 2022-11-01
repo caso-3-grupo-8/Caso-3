@@ -72,8 +72,8 @@ public class ClientProtocol {
             SecretKey sk_mac = f.csk2(str_llave);
             byte[] iv1 = generateIvBytes();
 
-            /* 8. We send C(K_AB1, <consulta>)*/
-            String consulta = "heeeyyy";
+            /* 8. We send C(K_AB1, <consulta>) and HMAC(K_AB2, <consulta>)*/
+            String consulta = "10";
             String str_iv1 = byte2str(iv1);
             IvParameterSpec ivSpec1 = new IvParameterSpec(iv1);
             byte[] byteC = f.senc(consulta.getBytes(), sk_srv, ivSpec1, "client: ");
@@ -88,7 +88,36 @@ public class ClientProtocol {
             pOut.println(str_iv1);
             System.out.println("Client iv1: " + str_iv1);
 
+            /* 10. We receive C(K_AB1, <rta>) and HMAC(K_AB2, <rta>)*/
+            String verified;
+            if ((verified = pIn.readLine()) != null) System.out.println("server check: " + verified);
+            assert verified != null;
+            if (verified.equals("OK")){
+                String stringCiphered;
+                String stringHMAC;
+                String StringIv2;
 
+                if ((stringCiphered = pIn.readLine()) != null) System.out.println("C(K_AB1, <ans>): " + stringG);
+                if ((stringHMAC = pIn.readLine()) != null) System.out.println("HMAC(K_AB2, <rta>): " + stringP);
+                if ((StringIv2 = pIn.readLine()) != null) System.out.println("iv2: " + stringGx);
+
+                assert StringIv2 != null;
+                byte[] iv2 = str2byte(StringIv2);
+                IvParameterSpec ivSpec2 = new IvParameterSpec(iv2);
+
+                assert stringCiphered != null;
+                byte[] descifrado = f.sdec(str2byte(stringCiphered), sk_srv, ivSpec2);
+                assert stringHMAC != null;
+                boolean verificar = f.checkInt(descifrado, sk_mac, str2byte(stringHMAC));
+                System.out.println("Client Integrity check:" + verificar);
+
+                if(verificar){
+                    pOut.println("OK");
+                }
+                else {
+                    pOut.println("ERROR");
+                }
+            }
         }
         else{
             /* 5. We send an ERROR message */
