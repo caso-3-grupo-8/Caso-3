@@ -3,12 +3,13 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.security.NoSuchAlgorithmException;
 
 public class Cliente {
     public static final int PUERTO = 4030;
     public static final String SERVIDOR = "localhost";
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws Exception {
         Socket socket = null;
         PrintWriter escritor = null;
         BufferedReader lector = null;
@@ -24,12 +25,10 @@ public class Cliente {
         }
 
         BufferedReader stdIn = new BufferedReader(new InputStreamReader(System.in));
-        System.out.println("P:");
-        ProtocoloCliente.diffieHellmann(stdIn,lector,escritor);
-        System.out.println("G:");
-        ProtocoloCliente.diffieHellmann(stdIn,lector,escritor);
-        System.out.println("G2x");
-        ProtocoloCliente.diffieHellmann(stdIn,lector,escritor);
+
+        ClientProtocol clientProtocol = new ClientProtocol();
+        clientProtocol.protocol(stdIn,lector,escritor);
+
 
         escritor.close();
         lector.close();
