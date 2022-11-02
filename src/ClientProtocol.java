@@ -1,26 +1,21 @@
-import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.math.BigInteger;
-import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.SecureRandom;
-import java.security.spec.InvalidKeySpecException;
-import java.util.Random;
 
 public class ClientProtocol {
-    private final static String PADDING = "AES/CBC/PKCS5Padding";
-    public final static String ALGORITMO = "AES";
     public SecurityFunctions f;
+    public String id;
 
-    public ClientProtocol() {
+    public ClientProtocol(String id) {
         this.f = new SecurityFunctions();
+        this.id = id;
     }
 
-    public void protocol(BufferedReader stdIn, BufferedReader pIn, PrintWriter pOut) throws Exception {
+    public void protocol(BufferedReader pIn, PrintWriter pOut) throws Exception {
         String stringG;
         String stringP;
         String stringGx;
@@ -29,10 +24,10 @@ public class ClientProtocol {
         /* 1. We send a SECURE INIT message */
         pOut.println("SECURE INIT");
 
-        if ((stringG = pIn.readLine()) != null) System.out.println("G: " + stringG);
-        if ((stringP = pIn.readLine()) != null) System.out.println("P: " + stringP);
-        if ((stringGx = pIn.readLine()) != null) System.out.println("Gx: " + stringGx);
-        if ((firma = pIn.readLine()) != null) System.out.println("Mensaje Cifrado: " + firma);
+        if ((stringG = pIn.readLine()) != null) System.out.println("Client: " + id + " found G: " + stringG);
+        if ((stringP = pIn.readLine()) != null) System.out.println("Client: " + id + " found P: " + stringP);
+        if ((stringGx = pIn.readLine()) != null) System.out.println("Client: " + id + " found Gx: " + stringGx);
+        if ((firma = pIn.readLine()) != null) System.out.println("Client: " + id + " found signature: " + firma);
 
         /* 3. We receive G, P and Gx parameters */
         assert stringG != null;
@@ -44,7 +39,7 @@ public class ClientProtocol {
 
         /* 4. We verify ciphered message with public key */
         PublicKey publicaServidor = f.read_kplus("datos_asim_srv.pub","Client: ");
-        String msj = G.toString()+","+P.toString()+","+Gx;
+        String msj = G+","+P+","+Gx;
 
         assert firma != null;
         boolean auth = f.checkSignature(publicaServidor, str2byte(firma), msj);
@@ -52,64 +47,66 @@ public class ClientProtocol {
 
         if(auth){
             /* 5. We send an OK message */
-            System.out.println("Client found signature successful, OK message sent.");
+            System.out.println("Client " + id + " found signature successful, OK message sent.");
             pOut.println("OK");
 
             SecureRandom r = new SecureRandom();
             int integerX = Math.abs(r.nextInt());
-            BigInteger x = BigInteger.valueOf((long) integerX);
+            BigInteger x = BigInteger.valueOf(integerX);
             BigInteger gy = G2X(G, x, P);
 
             /* 6b. We send Gy */
-            pOut.println(gy.toString());
+            pOut.println(gy);
 
             /* 7a. We calculate master key, generate symmetric key and iv1*/
             BigInteger llave_maestra = calcular_llave_maestra(Gx,x,P);
             String str_llave = llave_maestra.toString();
-            System.out.println("Client found llave maestra: " + str_llave);
+            System.out.println("Client " + id + " found llave maestra: " + str_llave);
 
             SecretKey sk_srv = f.csk1(str_llave);
             SecretKey sk_mac = f.csk2(str_llave);
             byte[] iv1 = generateIvBytes();
-
+ 
             /* 8. We send C(K_AB1, <consulta>) and HMAC(K_AB2, <consulta>)*/
-            String consulta = "10";
+            String consulta = id;
             String str_iv1 = byte2str(iv1);
             IvParameterSpec ivSpec1 = new IvParameterSpec(iv1);
-            byte[] byteC = f.senc(consulta.getBytes(), sk_srv, ivSpec1, "client: ");
+            byte[] byteC = f.senc(consulta.getBytes(), sk_srv, ivSpec1, "Client: "+ id);
             String c = byte2str(byteC);
             byte[] byteHMAC = f.hmac(consulta.getBytes(), sk_mac);
             String hmac = byte2str(byteHMAC);
 
             pOut.println(c);
-            System.out.println("Client C: " + c);
+            System.out.println("Client " + id + " C: " + c);
             pOut.println(hmac);
-            System.out.println("Client HMAC: " + hmac);
+            System.out.println("Client " + id + "HMAC: " + hmac);
             pOut.println(str_iv1);
-            System.out.println("Client iv1: " + str_iv1);
+            System.out.println("Client " + id + " iv1: " + str_iv1);
 
-            /* 10. We receive C(K_AB1, <rta>) and HMAC(K_AB2, <rta>)*/
+            /* 11. We receive C(K_AB1, <rta>) and HMAC(K_AB2, <rta>)*/
             String verified;
-            if ((verified = pIn.readLine()) != null) System.out.println("server check: " + verified);
+            if ((verified = pIn.readLine()) != null) System.out.println("Client " + id + " did server check: " + verified);
             assert verified != null;
             if (verified.equals("OK")){
                 String stringCiphered;
                 String stringHMAC;
                 String StringIv2;
 
-                if ((stringCiphered = pIn.readLine()) != null) System.out.println("C(K_AB1, <ans>): " + stringG);
-                if ((stringHMAC = pIn.readLine()) != null) System.out.println("HMAC(K_AB2, <rta>): " + stringP);
-                if ((StringIv2 = pIn.readLine()) != null) System.out.println("iv2: " + stringGx);
+                /* 11. We receive C(K_AB1, <rta>) and HMAC(K_AB2, <rta>)*/
+                if ((stringCiphered = pIn.readLine()) != null) System.out.println("Client " + id + " C(K_AB1, <ans>): " + stringG);
+                if ((stringHMAC = pIn.readLine()) != null) System.out.println("Client " + id + " HMAC(K_AB2, <rta>): " + stringP);
+                if ((StringIv2 = pIn.readLine()) != null) System.out.println("Client " + id + " iv2: " + stringGx);
 
                 assert StringIv2 != null;
                 byte[] iv2 = str2byte(StringIv2);
                 IvParameterSpec ivSpec2 = new IvParameterSpec(iv2);
 
+                /* 12. We verify C(K_AB1, <rta>) and HMAC(K_AB2, <rta>)*/
                 assert stringCiphered != null;
                 byte[] descifrado = f.sdec(str2byte(stringCiphered), sk_srv, ivSpec2);
                 assert stringHMAC != null;
                 boolean verificar = f.checkInt(descifrado, sk_mac, str2byte(stringHMAC));
-                System.out.println("Client Integrity check:" + verificar);
+                System.out.println("Client " + id + " Integrity check:" + verificar);
 
                 if(verificar){
                     pOut.println("OK");
@@ -121,7 +118,7 @@ public class ClientProtocol {
         }
         else{
             /* 5. We send an ERROR message */
-            System.out.println("Client found signature unsuccessful, ERROR message sent.");
+            System.out.println("Client " + id + " found signature unsuccessful, ERROR message sent.");
             pOut.println("ERROR");
         }
     }
@@ -142,12 +139,12 @@ public class ClientProtocol {
     public String byte2str( byte[] b )
     {
         // Encapsulamiento con hexadecimales
-        String ret = "";
-        for (int i = 0 ; i < b.length ; i++) {
-            String g = Integer.toHexString(((char)b[i])&0x00ff);
-            ret += (g.length()==1?"0":"") + g;
+        StringBuilder ret = new StringBuilder();
+        for (byte value : b) {
+            String g = Integer.toHexString(((char) value) & 0x00ff);
+            ret.append(g.length() == 1 ? "0" : "").append(g);
         }
-        return ret;
+        return ret.toString();
     }
 
     private BigInteger G2X(BigInteger base, BigInteger exponente, BigInteger modulo) {
