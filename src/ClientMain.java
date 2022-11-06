@@ -21,7 +21,7 @@ public class ClientMain {
 
         for (ClientThread ct:
              clientThreads) {
-            System.out.println("===================================");
+            System.out.println("====================================");
             ct.run();
         }
     }
