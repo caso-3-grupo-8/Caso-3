@@ -9,11 +9,13 @@ public class ClientThread extends Thread{
     public int port;
     public String server;
     public String id;
+    public medidor medidor;
 
-    public ClientThread(int port, String server, String id) {
+    public ClientThread(int port, String server, String id,medidor medidor) {
         this.port = port;
         this.server = server;
         this.id = id;
+        this.medidor= medidor;
     }
 
     @Override
@@ -31,7 +33,7 @@ public class ClientThread extends Thread{
             System.exit(-1);
         }
 
-        ClientProtocol clientProtocol = new ClientProtocol(id);
+        ClientProtocol clientProtocol = new ClientProtocol(id,medidor);
         try {
             clientProtocol.protocol(lector,escritor);
         } catch (Exception e) {

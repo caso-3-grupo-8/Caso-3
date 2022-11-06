@@ -13,9 +13,10 @@ public class ClientMain {
         int number = input.nextInt();
 
         ClientThread[] clientThreads = new ClientThread[number];
+        medidor medidor= new medidor(0, 0, 0, 0);
 
         for (int i = 0; i < number; i++) {
-            ClientThread clientThread = new ClientThread(PUERTO, SERVIDOR, String.valueOf(i));
+            ClientThread clientThread = new ClientThread(PUERTO, SERVIDOR, String.valueOf(i),medidor);
             clientThreads[i] = clientThread;
         }
 
@@ -24,5 +25,16 @@ public class ClientMain {
             System.out.println("===================================");
             ct.run();
         }
+        long tfirma= medidor.getTfirma()/number;
+        long tmac= medidor.getTmac()/number;
+        long tgy= medidor.getTgy()/number;
+        long tcifrado= medidor.getTcifrado()/number;
+
+        System.out.print("Tiempos promedio: \nTiempo firma: "+tfirma+"\nTiempo mac: "+
+        tmac+"\nTiempo Gy: "+tgy+"\nTiempo cifrado: "+ tcifrado+"\nContador: "+medidor.getContador()+"\n\n"+medidor.getListafirma()
+        +"\n\n"+medidor.getListamac()+"\n\n"+medidor.getListagy()+"\n\n"+medidor.getListacifrado());
+
+
+
     }
 }

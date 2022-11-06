@@ -9,10 +9,12 @@ import java.security.SecureRandom;
 public class ClientProtocol {
     public SecurityFunctions f;
     public String id;
+    public medidor medidor;
 
-    public ClientProtocol(String id) {
+    public ClientProtocol(String id,medidor medidor) {
         this.f = new SecurityFunctions();
         this.id = id;
+        this.medidor= medidor;
     }
 
     public void protocol(BufferedReader pIn, PrintWriter pOut) throws Exception {
@@ -38,11 +40,15 @@ public class ClientProtocol {
         BigInteger Gx = new BigInteger(stringGx);
 
         /* 4. We verify ciphered message with public key */
+        
         PublicKey publicaServidor = f.read_kplus("datos_asim_srv.pub","Client: ");
-        String msj = G+","+P+","+Gx;
+        String msj = G+","+P+","+Gx;    
 
         assert firma != null;
+        long tiniciofirma = System.nanoTime();
         boolean auth = f.checkSignature(publicaServidor, str2byte(firma), msj);
+        long tiempofirma = System.nanoTime()-tiniciofirma;
+        System.out.print("Tiempo firma: "+tiempofirma+", para id: "+id);
 
 
         if(auth){
@@ -53,7 +59,10 @@ public class ClientProtocol {
             SecureRandom r = new SecureRandom();
             int integerX = Math.abs(r.nextInt());
             BigInteger x = BigInteger.valueOf(integerX);
+            long tiniciogy = System.nanoTime();
             BigInteger gy = G2X(G, x, P);
+            long tiempogy = System.nanoTime()-tiniciogy;
+            System.out.print("Tiempo Gy: "+tiempogy+", para id: "+id);
 
             /* 6b. We send Gy */
             pOut.println(gy);
@@ -64,14 +73,23 @@ public class ClientProtocol {
             System.out.println("Client " + id + " found llave maestra: " + str_llave);
 
             SecretKey sk_srv = f.csk1(str_llave);
+            long tiniciomac = System.nanoTime();
             SecretKey sk_mac = f.csk2(str_llave);
+            long tiempomac = System.nanoTime()-tiniciomac;
+            System.out.print("Tiempo mac: "+tiempomac+", para id: "+id);
             byte[] iv1 = generateIvBytes();
  
             /* 8. We send C(K_AB1, <consulta>) and HMAC(K_AB2, <consulta>)*/
             String consulta = id;
             String str_iv1 = byte2str(iv1);
             IvParameterSpec ivSpec1 = new IvParameterSpec(iv1);
+
+            long tinicioc = System.nanoTime();
             byte[] byteC = f.senc(consulta.getBytes(), sk_srv, ivSpec1, "Client: "+ id);
+            long tiempocifrado = System.nanoTime()-tinicioc;
+            System.out.print("Tiempo cifrado: "+tiempocifrado+"para id: "+id);
+            medidor.ejecutar(tiempofirma, tiempomac, tiempocifrado, tiempogy);
+
             String c = byte2str(byteC);
             byte[] byteHMAC = f.hmac(consulta.getBytes(), sk_mac);
             String hmac = byte2str(byteHMAC);
